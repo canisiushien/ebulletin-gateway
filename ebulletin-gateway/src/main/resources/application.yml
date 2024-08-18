@@ -1,0 +1,89 @@
+## YAML Template.
+---
+server:
+  port: 8090
+
+#confi spring securité, routage, devtools, database connexion, ...
+spring:
+  application:
+    name: EBULLETIN-GATEWAY
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/ebulletin
+  cloud:
+    loadbalancer:
+      ribbon:
+        enabled: false
+    gateway:
+      discovery: 
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      #config des routes vers les differents services qui doivent passer par ce gateway
+      routes:
+        - id: EBULLETIN-METIER-1
+          uri: lb://EBULLETIN-METIER-1
+          predicates:
+            - Path=/api/ebulletin-metier/**
+        - id: SERVICE-XYZ
+          uri: lb://SERVICE-XYZ
+          predicates:
+            - Path=/api/xyz/**
+        - id: MICROSERVICE3
+          uri: http://localhost:8084
+          predicates:
+            - Path=/microservice3/**
+  devtools:
+    restart:
+      enabled: true
+  jpa:
+    properties:
+      hibernate:
+        show_sql: false
+    hibernate:
+      ddl-auto: none
+      jdbc.lob.non_contextual_creation: true
+      default_schema: public
+  datasource:
+    platform: postgres
+    url: jdbc:postgresql://localhost:5432/keycloakdb
+    username: postgres
+    password: admin
+
+#config keycoak
+keycloak:
+  realm: ebulletin
+  #auth-server-url: https://ebulletin.finances.bf/auth
+  auth-server-url: http://localhost:8080/
+  resource: ebulletin-backend
+  credentials:
+    secret: yROutTPZ7XZp8p0wHXAAGXSmh2ldoigk
+  use-resource-role-mappings: true
+  principal-attribute: preferred_username
+  public-client: true
+  bearer-only: true
+  cors: true
+  enabled: true
+
+#config de connexion au registry eureka
+#si le eureka server est hebergé sur une machine x differente de celle qui heberge le present service, renseigner la bonne valeur du defaultZone (ex. http://10.0.0.1:8761/eureka)
+eureka:
+  client:
+    register-with-eureka: true
+    fectch-registry: false
+    service-url:
+        defaultZone: http://localhost:8761/eureka
+  instance:
+    hostname: localhost
+    instance-id: ${spring.application.name}:${random.uuid}
+    prefer-ip-address: true
+---
+#log app
+logging:
+  level:
+    ROOT: INFO
+    bf.gov.finances.dgsi.ebulletingateway: 
+      - DEBUG
+      - INFO
